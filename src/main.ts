@@ -1,21 +1,37 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.useStaticAssets(join(__dirname, '..', 'src/public')); // CSS, JS, imagens
+
+  app.use((req, res, next) => {
+    if (req.path === '/') {
+      res.sendFile(join(__dirname, '..', 'src/public', 'index.html'));
+    } else {
+      next();
+    }
+  });
+
+  // Configuração do Swagger
   const config = new DocumentBuilder()
     .setTitle('Chatbot Llama API')
-    .setDescription('Chatbot Lllama entregável para o PET Saúde Digital')
+    .setDescription('Chatbot Llama entregável para o PET Saúde Digital')
     .setVersion('1.0')
     .addTag('Chat')
     .build();
 
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory, {
-    swaggerUiEnabled: true,
-  });
-  await app.listen(process.env.PORT ?? 3000);
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`Servidor rodando em http://localhost:${port}`);
+  console.log(`Swagger disponível em http://localhost:${port}/api`);
 }
+
 bootstrap();
