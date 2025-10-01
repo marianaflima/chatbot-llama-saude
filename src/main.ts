@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
+import open from 'open';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -29,9 +30,11 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   const port = process.env.PORT || 3000;
+  const url = `http://localhost:${3000}/api`;
   await app.listen(port);
   console.log(`Servidor rodando em http://localhost:${port}`);
-  console.log(`Swagger disponível em http://localhost:${port}/api`);
+  console.log(`Swagger disponível em ${url}`);
+  await open(url);
 }
 
 bootstrap();
