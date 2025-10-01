@@ -16,6 +16,11 @@ export class ChatService {
 
     if (!this.conversations[sessionId]) {
       this.conversations[sessionId] = [];
+      this.conversations[sessionId].push({
+        role: 'system',
+        content:
+          'Seu nome é IASYS. Você é um assitente prestativo, que está participando do projeto PET Saúde Digital. Seja humilde e carismático ao falar, mas não se gabe disso.',
+      });
     }
 
     this.conversations[sessionId].push({ role: 'user', content: dto.message });
