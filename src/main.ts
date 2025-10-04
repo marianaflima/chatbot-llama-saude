@@ -8,11 +8,11 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.useStaticAssets(join(__dirname, '..', 'src/public')); // CSS, JS, imagens
+  app.useStaticAssets(join(__dirname, '..', 'public')); // CSS, JS, imagens
 
   app.use((req, res, next) => {
     if (req.path === '/') {
-      res.sendFile(join(__dirname, '..', 'src/public', 'index.html'));
+      res.sendFile(join(__dirname, '..', 'public', 'index.html'));
     } else {
       next();
     }
