@@ -1,21 +1,27 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { join } from 'path';
-import open from 'open';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.useStaticAssets(join(__dirname, '..', 'src/public')); // CSS, JS, imagens
+  // app.useStaticAssets(join(__dirname, '..', 'public')); // CSS, JS, imagens
 
-  app.use((req, res, next) => {
-    if (req.path === '/') {
-      res.sendFile(join(__dirname, '..', 'src/public', 'index.html'));
-    } else {
-      next();
-    }
+  // app.use((req, res, next) => {
+  //   if (req.path === '/') {
+  //     res.sendFile(join(__dirname, '..', 'public', 'index.html'));
+  //   } else {
+  //     next();
+  //   }
+  // });
+
+  const port = process.env.PORT || 3000;
+  const url = process.env.WEB_URL || `http://localhost:${port}/`;
+  const swagger = `http://localhost:${port}/api`;
+
+  app.enableCors({
+    origin: [url],
   });
 
   // Configuração do Swagger
@@ -29,12 +35,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  const port = process.env.PORT || 3000;
-  const url = `http://localhost:${3000}/api`;
   await app.listen(port);
-  console.log(`Servidor rodando em http://localhost:${port}`);
-  console.log(`Swagger disponível em ${url}`);
-  await open(url);
+  console.log(`Servidor rodando em ${url}`);
+  console.log(`Swagger disponível em ${swagger}`);
+  // await open(swagger);
 }
 
 bootstrap();
