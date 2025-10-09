@@ -23,6 +23,7 @@ async function bootstrap() {
   app.enableCors({
     origin: ['https://chat-iasys.netlify.app/', `http://localhost:${port}/`],
     methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   });
 
