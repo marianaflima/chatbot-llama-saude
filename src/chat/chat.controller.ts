@@ -16,6 +16,11 @@ export class ChatController {
   async sendMessage(
     @Body() dto: SendMessageDTO,
   ): Promise<{ reply: string; history: ChatMessage[] }> {
-    return await this.chatService.handleMessage(dto);
+    try {
+      const result = await this.chatService.handleMessage(dto);
+      return result;
+    } catch (error) {
+      return { reply: 'Desculpe, houve um erro no servidor.', history: [] };
+    }
   }
 }

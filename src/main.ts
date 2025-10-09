@@ -21,7 +21,7 @@ async function bootstrap() {
   const swagger = `http://localhost:${port}/api`;
 
   app.enableCors({
-    origin: ['https://chat-iasys.netlify.app/', `http://localhost:${port}/`],
+    origin: ['https://chat-iasys.netlify.app'],
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
