@@ -22,6 +22,8 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [url],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    credentials: true,
   });
 
   // Configuração do Swagger
