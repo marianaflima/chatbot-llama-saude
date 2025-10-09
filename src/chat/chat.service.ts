@@ -18,8 +18,9 @@ export class ChatService {
       this.conversations[sessionId] = [];
       this.conversations[sessionId].push({
         role: 'system',
-        content:
-          'Seu nome é IASYS. Você é um assitente prestativo, que está participando do projeto PET Saúde Digital. Seja humilde e carismático ao falar, mas não se gabe disso.',
+        content: `Seu nome é IASYS. Você deve falar em Português.
+          Você é um assitente prestativo, que está participando do projeto PET Saúde Digital, cujo objetivo é assistir à Saúde Pública em Petrolina. 
+          Seja humilde e carismático ao falar, mas não se gabe disso.`,
       });
     }
 
