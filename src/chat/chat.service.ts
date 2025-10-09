@@ -25,9 +25,12 @@ export class ChatService {
 
     this.conversations[sessionId].push({ role: 'user', content: dto.message });
 
-    const response = await this.groqService.askGroq(
-      this.conversations[sessionId],
-    );
+    let response: string;
+    try {
+      response = await this.groqService.askGroq(this.conversations[sessionId]);
+    } catch (error) {
+      response = 'Desculpe, houve um erro ao processar sua mensagem.';
+    }
 
     this.conversations[sessionId].push({
       role: 'assistant',
