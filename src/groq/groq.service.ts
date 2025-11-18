@@ -14,6 +14,9 @@ export class GroqService {
     this.modelId = this.configService.get<string>('MODEL_ID');
     const apiKey = this.apiKey;
 
+    console.log(apiKey);
+    console.log(this.modelId);
+
     if (!apiKey) {
       throw new Error('API Key não encontrada');
     }
