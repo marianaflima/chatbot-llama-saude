@@ -6,7 +6,6 @@ interface ChatflowContext {
   userInput: string;
   response: string;
   nextState?: string;
-  history: ChatMessage[];
 }
 
 export const createChatflowMachine = (groqService: GroqService) =>
@@ -18,34 +17,24 @@ export const createChatflowMachine = (groqService: GroqService) =>
         userInput: '',
         response: '',
         nextState: '',
-        history: [] as ChatMessage[],
-      },
-      on: {
-        UPDATE_HISTORY: {
-          actions: assign({
-            history: ({ event }) => event.history,
-          }),
-        },
       },
       states: {
         start: {
-          after: {
-            3000: {
-              target: 'menu_interaction',
-            },
+          on: {
+            HEALTH_ISSUE_INFORM: 'health_issue_inform',
+            SCHEDULE_APPOINTMENT: 'schedule_appointment',
+            QUICK_INFO: 'quick_info',
           },
-          entry: assign({
-            response: `Olá, eu sou o assistente virtual do SUS! `,
-          }),
         },
-        menu_interaction: {
+        menu: {
           on: {
             HEALTH_ISSUE_INFORM: 'health_issue_inform',
             SCHEDULE_APPOINTMENT: 'schedule_appointment',
             QUICK_INFO: 'quick_info',
           },
           entry: assign({
-            response: `Você gostaria de: \n1) Informar um problema de saúde \n2) Agendar ou confirmar uma consulta/procedimento \n 3) Orientações rápidas\n `,
+            response:
+              'Você gostaria de: \n 1) Informar um problema de saúde \n 2) Agendar ou confirmar uma consulta ou procedimento \n 3) Orientações rápidas',
           }),
         },
         health_issue_inform: {
@@ -62,20 +51,30 @@ export const createChatflowMachine = (groqService: GroqService) =>
           }),
         },
         health_issue_analysis: {
+          entry: assign({
+            response: 'Analisando sintomas...',
+          }),
           invoke: {
-            src: 'askLlamaGroq',
+            src: 'askLlamaForSymptomSeverity',
             input: ({ context: { userInput } }) => userInput,
-            onDone: {
-              target: 'health_issue_response',
-              actions: [
-                assign({
-                  nextState: ({ event }) => {
-                    const newState = event.output;
-                    return newState;
-                  },
+            onDone: [
+              {
+                target: 'health_issue_mild_symptoms',
+                guard: ({ event }) =>
+                  event.output === 'health_issue_mild_symptoms',
+                actions: assign({
+                  nextState: ({ event }) => event.output,
                 }),
-              ],
-            },
+              },
+              {
+                target: 'health_issue_severe_symptoms',
+                guard: ({ event }) =>
+                  event.output === 'health_issue_severe_symptoms',
+                actions: assign({
+                  nextState: ({ event }) => event.output,
+                }),
+              },
+            ],
             onError: {
               target: 'error',
               actions: assign({
@@ -84,36 +83,24 @@ export const createChatflowMachine = (groqService: GroqService) =>
             },
           },
         },
-        health_issue_response: {
-          always: [
-            {
-              target: 'health_issue_mild_symptoms',
-              guard: ({ context }) =>
-                context.nextState === 'health_issue_mild_symptoms',
-            },
-            {
-              target: 'health_issue_severe_symptoms',
-              guard: ({ context }) =>
-                context.nextState === 'health_issue_severe_symptoms',
-            },
-            { target: 'error' },
-          ],
-        },
-
         health_issue_mild_symptoms: {
           entry: assign({
-            response: `Com base no que você disse, você pode tomar algumas preucações ainda em casa \nRepouse e se hidrate. \nSe os sintomas persistirem ou piorarem, busque a UBS mais próxima de vocÊ`,
+            response: `Com base no que você me relatou, você pode tomar algumas preucações ainda em casa: \nLembre-se de Repousar e se hidrate. \nSe os sintomas persistirem ou piorarem, busque a UBS mais próxima de você!`,
           }),
-          on: {
-            STILL_NEED_HELP: 'still_need_help',
+          after: {
+            600: {
+              target: 'still_need_help',
+            },
           },
         },
         health_issue_severe_symptoms: {
           entry: assign({
             response: `Seus sintomas indicam alerta! \nProcure o hospital mais perto de você para ser atendido prontamente!`,
           }),
-          on: {
-            STILL_NEED_HELP: 'still_need_help',
+          after: {
+            600: {
+              target: 'still_need_help',
+            },
           },
         },
         schedule_appointment: {
@@ -125,12 +112,16 @@ export const createChatflowMachine = (groqService: GroqService) =>
             response: `Há mais algo em que eu possa ajudar?`,
           }),
           on: {
-            YES: 'menu_interaction',
+            YES: 'menu',
             NO: 'end_session',
           },
         },
         error: {
-          always: [{ target: 'menu_interaction' }],
+          after: {
+            500: {
+              target: 'menu',
+            },
+          },
           entry: assign({
             response: 'Desculpe, houve um erro. Tente novamente.',
           }),
@@ -145,36 +136,37 @@ export const createChatflowMachine = (groqService: GroqService) =>
     },
     {
       actors: {
-        askLlamaGroq: fromPromise(async ({ input }: { input: string }) => {
-          try {
-            console.log(input);
-            if (!input) {
-              throw new Error('Input inválido');
-            }
-            const prompt: ChatMessage[] = [
-              {
-                role: 'system',
-                content:
-                  'Analise os sintomas e classifique como leves ou graves. Retorne apenas: {"response": "Sua resposta", "nextState": "health_issue_mild_symptoms" ou "health_issue_severe_symptoms"}',
-              },
-              { role: 'user', content: input },
-            ];
+        askLlamaForSymptomSeverity: fromPromise(
+          async ({ input }: { input: string }) => {
+            try {
+              console.log(input);
+              if (!input) {
+                throw new Error('Input inválido');
+              }
+              const prompt: ChatMessage[] = [
+                {
+                  role: 'system',
+                  content:
+                    'Analise os sintomas e classifique como leves ou graves. Retorne apenas: {"response": "Sua resposta", "nextState": "health_issue_mild_symptoms" ou "health_issue_severe_symptoms"}',
+                },
+                { role: 'user', content: input },
+              ];
 
-            const rawResponse = await groqService.askGroq(prompt);
-            const parsed = JSON.parse(rawResponse) as {
-              response: string;
-              nextState: string;
-            };
-            console.log();
-            return parsed.nextState;
-          } catch (error) {
-            console.error(error);
-            return {
-              response: 'Erro na análise. Tente novamente.',
-              nextState: 'error',
-            };
-          }
-        }),
+              const rawResponse = await groqService.askGroq(prompt);
+              const parsed = JSON.parse(rawResponse) as {
+                response: string;
+                nextState: string;
+              };
+              return parsed.nextState;
+            } catch (error) {
+              console.error(error);
+              return {
+                response: 'Erro na análise. Tente novamente.',
+                nextState: 'error',
+              };
+            }
+          },
+        ),
       },
     },
   );
