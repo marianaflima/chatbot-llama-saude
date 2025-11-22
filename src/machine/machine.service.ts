@@ -8,13 +8,29 @@ import { ChatMessage } from 'src/chat/chat.types';
 export class MachineService {
   private machine: Record<string, any> = {};
   private sessionId: string = '';
-  private groqService: GroqService;
 
-  public getOrCreateMachine(sessionId: string) {
+  constructor(private readonly groqService: GroqService) {}
+
+  public getMachine(): Record<string, any> {
+    if (this.sessionId) {
+      const id = this.sessionId;
+      const machine = this.machine[id];
+      return machine;
+    }
+    return {
+      message: 'Não foi possível encontrar a máquina',
+      sessionId: this.sessionId,
+    };
+  }
+
+  public createMachine(sessionId: string) {
     this.sessionId = sessionId;
     if (!this.machine[sessionId]) {
       try {
-        const machine: any = createChatflowMachine(this.groqService);
+        let machine: any = {};
+        if (this.groqService) {
+          machine = createChatflowMachine(this.groqService);
+        }
         if (!machine) {
           throw new Error('Falha ao criar máquina: máquina é null/undefined');
         }
@@ -78,16 +94,83 @@ export class MachineService {
     return trimmed;
   }
 
-  public interpretMessage(message: string, history: ChatMessage[]) {
-    this.machine[this.sessionId].send({
-      type: 'UPDATE_HISTORY',
-      history,
-    });
+  private getSnapshot() {
+    const machine = this.getMachine() as Record<string, any>;
+
+    return machine.getSnapshot();
+  }
+
+  private getContext() {
+    const snapshot = this.getSnapshot();
+
+    return snapshot.context;
+  }
+
+  private invokeStateResolve() {}
+
+  public async interpretMessage(
+    message: string,
+    history: ChatMessage[],
+  ): Promise<string[]> {
+    const machine = this.getMachine();
+
+    let snapshot = this.getSnapshot();
+    const responses: string[] = [];
+
+    let lastStateValue = snapshot.value;
+
     const eventType = this.mapInputToEvent(message);
-    this.machine[this.sessionId].send({
-      type: eventType,
-      value: message,
-      history,
+    machine.send({ type: eventType, value: message });
+
+    snapshot = this.getSnapshot();
+    if (snapshot.context.response) {
+      responses.push(snapshot.context.response);
+    }
+
+    // Se o estado mudou imediatamente (transição síncrona), atualizamos o rastreador
+    lastStateValue = snapshot.value;
+
+    // 4. Inicia monitorização assíncrona para capturar a cadeia de eventos (Invoke -> After -> Etc)
+    return new Promise((resolve) => {
+      let silenceTimer: NodeJS.Timeout;
+      let isResolved = false;
+
+      // Função para finalizar e devolver tudo o que coletamos
+      const finish = () => {
+        if (isResolved) return;
+        isResolved = true;
+        sub.unsubscribe(); // Para de ouvir a máquina
+        resolve(responses);
+      };
+
+      // Função para reiniciar o tempo de espera (Janela de Coleta)
+      // Usamos 2000ms para garantir que cobre o teu 'after' de 600ms com folga
+      const resetTimer = () => {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(finish, 1000);
+      };
+
+      const sub = machine.subscribe((newSnapshot) => {
+
+        if (
+          JSON.stringify(newSnapshot.value) !==
+            JSON.stringify(lastStateValue) &&
+          newSnapshot.context.response
+        ) {
+          const lastResponse = responses[responses.length - 1];
+          if (lastResponse !== newSnapshot.context.response) {
+            responses.push(newSnapshot.context.response);
+          }
+
+          lastStateValue = newSnapshot.value;
+
+          resetTimer();
+        }
+
+      });
+
+     
+      resetTimer();
     });
   }
 }
