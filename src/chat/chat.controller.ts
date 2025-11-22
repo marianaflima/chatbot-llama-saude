@@ -13,14 +13,16 @@ export class ChatController {
   }
 
   @Post()
-  async sendMessage(
-    @Body() dto: SendMessageDTO,
-  ): Promise<{ reply: string; history: ChatMessage[] }> {
+  async sendMessage(@Body() dto: SendMessageDTO): Promise<{
+    replies: string[];
+    history: ChatMessage[];
+  }> {
     try {
       const result = await this.chatService.handleMessage(dto);
       return result;
     } catch (error) {
-      return { reply: 'Desculpe, houve um erro no servidor.', history: [] };
+      console.error(error);
+      return { replies: ['Desculpe, houve um erro no servidor.'], history: [] };
     }
   }
 }
