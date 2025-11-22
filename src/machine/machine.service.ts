@@ -108,59 +108,6 @@ export class MachineService {
 
   private invokeStateResolve() {}
 
-  // public async interpretMessage(
-  //   message: string,
-  //   history: ChatMessage[],
-  // ): Promise<string[]> {
-  //   const machine = this.getMachine();
-  //   let snapshot = this.getSnapshot();
-  //   const initialState = snapshot.value;
-  //   const responses: string[] = [];
-
-  //   const eventType = this.mapInputToEvent(message);
-  //   machine.send({ type: eventType, value: message, history });
-
-  //   snapshot = this.getSnapshot();
-
-  //   // Adiciona a resposta inicial (do estado após send)
-  //   if (snapshot.context.response) {
-  //     responses.push(snapshot.context.response);
-  //   }
-
-  //   if (snapshot.children && Object.keys(snapshot.children).length > 0) {
-  //     // Lógica para invokes (da primeira versão, mas com captura melhorada)
-  //     return new Promise((resolve) => {
-  //       const sub = machine.subscribe((newSnapshot) => {
-  //         if (newSnapshot.value !== initialState) {
-  //           responses.push(newSnapshot.context.response);
-  //           sub.unsubscribe();
-  //           resolve(responses);
-  //         }
-  //       });
-  //     });
-  //   } else {
-  //     // Lógica para afters (mistura: da primeira versão, mas com timeout maior e sem else if precoce)
-  //     return new Promise((resolve) => {
-  //       const sub = machine.subscribe((newSnapshot) => {
-  //         // Captura mudança de estado (incluindo via after), sem resolver se não mudou
-  //         if (
-  //           newSnapshot.value !== initialState &&
-  //           newSnapshot.context.response
-  //         ) {
-  //           responses.push(newSnapshot.context.response);
-  //           sub.unsubscribe();
-  //           resolve(responses);
-  //         }
-  //       });
-  //       // Timeout maior (1000ms) para dar tempo ao after (500ms) + margem
-  //       setTimeout(() => {
-  //         sub.unsubscribe();
-  //         resolve(responses); // Resolve com o que tem (pelo menos a resposta inicial)
-  //       }, 1200);
-  //     });
-  //   }
-  // }
-
   public async interpretMessage(
     message: string,
     history: ChatMessage[],
@@ -219,7 +166,7 @@ export class MachineService {
 
           resetTimer();
         }
-        
+
       });
 
      
