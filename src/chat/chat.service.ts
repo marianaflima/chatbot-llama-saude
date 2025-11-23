@@ -26,10 +26,13 @@ export class ChatService {
     const sessionId = dto.sessionId || uuidv4();
     this.getOrCreateConversationHistory(sessionId);
 
-    this.machineService.interpretMessage(dto.message);
+    this.machineService.interpretMessage(
+      dto.message,
+      this.conversations[sessionId],
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 100)); // Hack simples; idealmente, observe o ator
-    const snapshot = machine.getSnapshot();
+    const snapshot = this.machineService.getSnapshot(sessionId);
 
     console.log(
       'Estado atual da máquina:',

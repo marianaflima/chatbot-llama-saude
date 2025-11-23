@@ -8,7 +8,8 @@ import { ChatMessage } from 'src/chat/chat.types';
 export class MachineService {
   private machine: Record<string, any> = {};
   private sessionId: string = '';
-  private groqService: GroqService;
+
+  constructor(private readonly groqService: GroqService) {}
 
   public getOrCreateMachine(sessionId: string) {
     this.sessionId = sessionId;
@@ -89,5 +90,9 @@ export class MachineService {
       value: message,
       history,
     });
+  }
+
+  public getSnapshot(sessionId: string) {
+    return this.machine[sessionId].getSnapshot();
   }
 }
