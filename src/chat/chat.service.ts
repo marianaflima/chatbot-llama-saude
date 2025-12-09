@@ -16,7 +16,7 @@ export class ChatService {
   private createConversationHistory(sessionId: string) {
     if (!this.conversations[sessionId]) {
       this.conversations[sessionId] = [];
-      this.machineService.createMachine(sessionId);
+      this.machineService.getOrCreateActor(sessionId);
     }
   }
 
@@ -31,8 +31,8 @@ export class ChatService {
     const history = this.conversations[sessionId];
 
     const responses = await this.machineService.interpretMessage(
+      sessionId,
       dto.message,
-      history,
     );
 
     responses.forEach((res) => {
