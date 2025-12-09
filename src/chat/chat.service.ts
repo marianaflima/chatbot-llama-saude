@@ -13,16 +13,17 @@ export class ChatService {
     private readonly machineService: MachineService,
   ) {}
 
-  private getOrCreateConversationHistory(sessionId: string) {
+  private createConversationHistory(sessionId: string) {
     if (!this.conversations[sessionId]) {
       this.conversations[sessionId] = [];
-      this.machineService.getOrCreateMachine(sessionId);
+      this.machineService.getOrCreateActor(sessionId);
     }
   }
 
-  async handleMessage(
-    dto: SendMessageDTO,
-  ): Promise<{ reply: string; history: ChatMessage[] }> {
+  async handleMessage(dto: SendMessageDTO): Promise<{
+    replies: string[];
+    history: ChatMessage[];
+  }> {
     const sessionId = dto.sessionId || uuidv4();
     this.getOrCreateConversationHistory(sessionId);
 
@@ -34,18 +35,16 @@ export class ChatService {
     await new Promise((resolve) => setTimeout(resolve, 100)); // Hack simples; idealmente, observe o ator
     const snapshot = this.machineService.getSnapshot(sessionId);
 
-    console.log(
-      'Estado atual da máquina:',
-      snapshot.value,
-      'Contexto:',
-      snapshot.context,
+    const responses = await this.machineService.interpretMessage(
+      sessionId,
+      dto.message,
     );
 
-    const reply = snapshot.context.response;
+    responses.forEach((res) => {
+      history.push({ role: 'assistant', content: res });
+    });
 
-    this.conversations[sessionId].push({ role: 'user', content: dto.message });
-    this.conversations[sessionId].push({ role: 'assistant', content: reply });
-    return { reply, history: this.conversations[sessionId] };
+    return { replies: responses, history };
   }
 
   stateSystemAsGenAIChatbot(sessionId: string): void {

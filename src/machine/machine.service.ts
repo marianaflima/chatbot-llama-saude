@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { createChatflowMachine } from './machine.xstate';
 import { GroqService } from 'src/groq/groq.service';
-import { createActor } from 'xstate';
-import { ChatMessage } from 'src/chat/chat.types';
+import { ActorRefFrom, createActor } from 'xstate';
+
+type ChatflowActor = ActorRefFrom<ReturnType<typeof createChatflowMachine>>;
 
 @Injectable()
 export class MachineService {
@@ -30,30 +31,99 @@ export class MachineService {
         throw new Error(`Falha na criação da máquina: ${error}`);
       }
     }
+    return this.actors[sessionId];
   }
 
-  private mapInputToEvent(input: string): string | null {
+  public async interpretMessage(
+    sessionId: string,
+    message: string,
+  ): Promise<string[]> {
+    this.logger.log('Starting machine message interpretation');
+    const actor = this.getOrCreateActor(sessionId);
+
+    let snapshot = actor.getSnapshot();
+    const lastStateValue = snapshot.value;
+
+    const eventType = this.mapInputToEvent(message, lastStateValue as string);
+
+    console.log(eventType);
+    actor.send({ type: eventType as string, value: message });
+
+    await this.sleep(1200);
+
+    snapshot = actor.getSnapshot();
+
+    this.logger.log('Obtaining messages from the machine');
+    const responses = snapshot.context.responses || [];
+
+    console.log(responses);
+
+    actor.send({ type: 'CLEAR_RESPONSES' });
+
+    console.log('retornando as respostas');
+    this.logger.log('Sending responses to the chatbot');
+    return responses;
+  }
+
+  private mapInputToEvent(input: string, lastState: string): string | null {
+    this.logger.log('Classifying the event type to send for the machine');
     const trimmed = input.trim().toLowerCase();
-    if (
-      trimmed === '1' ||
-      trimmed.includes('problema') ||
-      trimmed.includes('saúde')
-    ) {
-      return 'HEALTH_ISSUE_INFORM';
+    if (lastState === 'start') {
+      if (
+        trimmed === '1' ||
+        trimmed.includes('problema') ||
+        trimmed.includes('saúde')
+      ) {
+        return 'HEALTH_ISSUE_INFORM';
+      }
+      if (
+        trimmed === '2' ||
+        trimmed.includes('agendar') ||
+        trimmed.includes('consulta')
+      ) {
+        console.log('bateu aqui');
+        return 'SCHEDULE_APPOINTMENT';
+      }
+      if (
+        trimmed === '3' ||
+        trimmed.includes('orientações') ||
+        trimmed.includes('rápidas')
+      ) {
+        return 'QUICK_GUIDANCE';
+      }
     }
-    if (
-      trimmed === '2' ||
-      trimmed.includes('agendar') ||
-      trimmed.includes('consulta')
-    ) {
-      return 'SCHEDULE_APPOINTMENT';
+    if (lastState === 'schedule_appointment_flow') {
+      if (trimmed === '1' || trimmed.includes('agendar')) {
+        return 'SCHEDULE';
+      }
+      if (trimmed === '2' || trimmed.includes('verificar')) {
+        return 'VERIFY';
+      }
     }
-    if (
-      trimmed === '3' ||
-      trimmed.includes('orientações') ||
-      trimmed.includes('rápidas')
-    ) {
-      return 'QUICK_INFO';
+    if (lastState === 'quick_guidance_flow') {
+      if (
+        trimmed === '1' ||
+        trimmed.includes('vacinação') ||
+        trimmed.includes('vacinacao')
+      ) {
+        return 'VACCINATION_FLOW';
+      }
+      if (
+        trimmed === '2' ||
+        trimmed.includes('medidas') ||
+        trimmed.includes('higiene')
+      ) {
+        return 'HYGIENE_MEASURES_FLOW';
+      }
+      if (
+        trimmed === '3' ||
+        trimmed.includes('situacoes') ||
+        trimmed.includes('situações') ||
+        trimmed.includes('urgencia') ||
+        trimmed.includes('urgência')
+      ) {
+        return 'URGENCY_SITUATION_FLOW';
+      }
     }
     if (trimmed === 'sim' || trimmed === 's') {
       return 'YES';
@@ -63,6 +133,15 @@ export class MachineService {
     }
     if (trimmed === 'ajuda') {
       return 'STILL_NEED_HELP';
+    }
+    if (lastState === 'check_user_or_other_person_vaccination') {
+      console.log('bateu aqui');
+      if (trimmed === '2' || trimmed === 'pessoa' || trimmed === 'outra') {
+        return 'OTHER_PERSON';
+      }
+      if (trimmed === '1' || trimmed === 'mim' || trimmed === 'eu') {
+        return 'MYSELF';
+      }
     }
     if (
       ![
@@ -79,17 +158,8 @@ export class MachineService {
     return trimmed;
   }
 
-  public interpretMessage(message: string, history: ChatMessage[]) {
-    this.machine[this.sessionId].send({
-      type: 'UPDATE_HISTORY',
-      history,
-    });
-    const eventType = this.mapInputToEvent(message);
-    this.machine[this.sessionId].send({
-      type: eventType,
-      value: message,
-      history,
-    });
+  private sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   public getSnapshot(sessionId: string) {

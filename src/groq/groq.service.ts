@@ -33,17 +33,13 @@ export class GroqService {
     const completion = await this.groqClient.chat.completions.create({
       messages: formattedMessages,
       model: this.modelId as string,
-      temperature: 1,
+      temperature: 0.1,
       max_completion_tokens: 1024,
       top_p: 1,
-      stream: true,
+      stream: false,
       stop: null,
     });
 
-    let response: string = '';
-    for await (const chunk of completion) {
-      response += chunk.choices[0]?.delta?.content || '';
-    }
-    return response;
+    return completion.choices[0]?.message?.content || '';
   }
 }
