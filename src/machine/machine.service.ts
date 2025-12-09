@@ -7,16 +7,29 @@ type ChatflowActor = ActorRefFrom<ReturnType<typeof createChatflowMachine>>;
 
 @Injectable()
 export class MachineService {
-  private actors: Record<string, ChatflowActor> = {};
-  private logger: Logger = new Logger(MachineService.name);
+  private machine: Record<string, any> = {};
+  private sessionId: string = '';
 
   constructor(private readonly groqService: GroqService) {}
 
-  public getOrCreateActor(sessionId: string): ChatflowActor {
-    if (!this.actors[sessionId]) {
-      const machine = createChatflowMachine(this.groqService);
-      this.actors[sessionId] = createActor(machine).start();
-      this.logger.log(`New machine created - session id: ${sessionId}`);
+  public getOrCreateMachine(sessionId: string) {
+    this.sessionId = sessionId;
+    if (!this.machine[sessionId]) {
+      try {
+        const machine: any = createChatflowMachine(this.groqService);
+        if (!machine) {
+          throw new Error('Falha ao criar máquina: máquina é null/undefined');
+        }
+        this.machine[sessionId] = createActor(machine).start();
+      } catch (error) {
+        console.error(
+          'Erro ao criar máquina para sessão',
+          sessionId,
+          ': ',
+          error,
+        );
+        throw new Error(`Falha na criação da máquina: ${error}`);
+      }
     }
     return this.actors[sessionId];
   }
@@ -149,4 +162,7 @@ export class MachineService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  public getSnapshot(sessionId: string) {
+    return this.machine[sessionId].getSnapshot();
+  }
 }
