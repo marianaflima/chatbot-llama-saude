@@ -1,17 +1,8 @@
-import {
-  assign,
-  createMachine,
-  enqueueActions,
-  fromPromise,
-  StateMachine,
-} from 'xstate';
+import { assign, createMachine, fromPromise, StateMachine } from 'xstate';
 import { ChatMessage } from '../chat/chat.types';
 import { GroqService } from 'src/groq/groq.service';
-import { response } from 'express';
 import { VaccinationData, vacinacao } from 'src/data/vacina.data';
-import { ContextCreator } from '@nestjs/core/helpers/context-creator';
 import { Logger } from '@nestjs/common';
-import { rejects } from 'assert';
 
 interface ChatflowContext {
   userInput: string;
