@@ -25,15 +25,10 @@ export class ChatService {
     history: ChatMessage[];
   }> {
     const sessionId = dto.sessionId || uuidv4();
-    this.getOrCreateConversationHistory(sessionId);
+    this.createConversationHistory(sessionId);
 
-    this.machineService.interpretMessage(
-      dto.message,
-      this.conversations[sessionId],
-    );
-
-    await new Promise((resolve) => setTimeout(resolve, 100)); // Hack simples; idealmente, observe o ator
-    const snapshot = this.machineService.getSnapshot(sessionId);
+    this.conversations[sessionId].push({ role: 'user', content: dto.message });
+    const history = this.conversations[sessionId];
 
     const responses = await this.machineService.interpretMessage(
       sessionId,
