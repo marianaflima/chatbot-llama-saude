@@ -55,7 +55,7 @@ export class MachineService {
   private mapInputToEvent(input: string, lastState: string): string | null {
     this.logger.log('Classifying the event type to send for the machine');
     const trimmed = input.trim().toLowerCase();
-    if (lastState === 'start') {
+    if (lastState === 'menu') {
       if (
         trimmed === '1' ||
         trimmed.includes('problema') ||
