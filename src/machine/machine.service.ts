@@ -33,7 +33,6 @@ export class MachineService {
 
     const eventType = this.mapInputToEvent(message, lastStateValue as string);
 
-    console.log(eventType);
     actor.send({ type: eventType as string, value: message });
 
     await this.sleep(1200);
@@ -43,11 +42,8 @@ export class MachineService {
     this.logger.log('Obtaining messages from the machine');
     const responses = snapshot.context.responses || [];
 
-    console.log(responses);
-
     actor.send({ type: 'CLEAR_RESPONSES' });
 
-    console.log('retornando as respostas');
     this.logger.log('Sending responses to the chatbot');
     return responses;
   }
@@ -68,7 +64,6 @@ export class MachineService {
         trimmed.includes('agendar') ||
         trimmed.includes('consulta')
       ) {
-        console.log('bateu aqui');
         return 'SCHEDULE_APPOINTMENT';
       }
       if (
@@ -122,7 +117,6 @@ export class MachineService {
       return 'STILL_NEED_HELP';
     }
     if (lastState === 'check_user_or_other_person_vaccination') {
-      console.log('bateu aqui');
       if (trimmed === '2' || trimmed === 'pessoa' || trimmed === 'outra') {
         return 'OTHER_PERSON';
       }

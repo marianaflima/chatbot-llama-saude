@@ -957,7 +957,6 @@ export const createChatflowMachine = (groqService: GroqService) =>
               };
               return parsed.nextState;
             } catch (error) {
-              console.error(error);
               return {
                 response: 'Erro na análise. Tente novamente.',
                 nextState: 'error',
@@ -1031,21 +1030,15 @@ export const createChatflowMachine = (groqService: GroqService) =>
                 .join('\n') +
               '\nQual a sua disponibilidade?';
 
-            console.log({ scheduleOptions, typeOfAppointment, response });
-
             return { scheduleOptions, typeOfAppointment, response };
           } catch (err) {
-            console.error(err.message);
           }
         }),
         extractChosenDate: fromPromise(async ({ input }: { input: any }) => {
           try {
-            console.log(input);
             const availableDatesList = input.availableDates
               .map((d) => `${d.data} às ${d.hora}`)
               .join(', ');
-
-            console.log(availableDatesList);
 
             const prompt: ChatMessage[] = [
               {
@@ -1059,9 +1052,7 @@ export const createChatflowMachine = (groqService: GroqService) =>
             ];
 
             const rawResponse = await groqService.askGroq(prompt);
-            console.log(rawResponse);
             const parsed = JSON.parse(rawResponse);
-            console.log(parsed);
 
             if (parsed.chosen_date === 'null') {
               throw new Error('Data não identificada ou inválida.');
@@ -1072,12 +1063,11 @@ export const createChatflowMachine = (groqService: GroqService) =>
               chosenTime: parsed.chosen_time,
             };
           } catch (err) {
-            console.error(err.message);
+            throw new Error(err.message);
           }
         }),
         scheduleAppointment: fromPromise(async ({ input }: { input: any }) => {
           try {
-            console.log(input);
             const selectedAppointment = input.scheduledDateOptions.find(
               (dateOption) => {
                 return dateOption.data === input.chosenDate.trim();
@@ -1100,7 +1090,6 @@ export const createChatflowMachine = (groqService: GroqService) =>
               throw new Error('Falha ao reservar o horário no sistema.');
             }
           } catch (err) {
-            console.error('Erro no agendamento:', err.message);
             throw err;
           }
         }),
@@ -1126,7 +1115,6 @@ export const createChatflowMachine = (groqService: GroqService) =>
             ];
 
             const rawResponse = await groqService.askGroq(prompt);
-            console.log(rawResponse);
             const parse = JSON.parse(rawResponse);
             const responseCategory = parse.category;
 
@@ -1203,7 +1191,6 @@ export const createChatflowMachine = (groqService: GroqService) =>
 
               return response;
             } catch (err) {
-              console.error(err.message);
               throw err;
             }
           },
@@ -1248,7 +1235,6 @@ export const createChatflowMachine = (groqService: GroqService) =>
 
               return response;
             } catch (err) {
-              console.error(err.message);
               throw err;
             }
           },
@@ -1258,23 +1244,15 @@ export const createChatflowMachine = (groqService: GroqService) =>
             const dateString = input;
             const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 
-            console.log(dateString);
-
             if (!regex.test(dateString)) {
               throw new Error('Formato inválido. Use DD/MM/AAAA.');
             }
 
             const parts = regex.exec(dateString) as RegExpExecArray;
 
-            console.log(parts);
-
             const day = parseInt(parts[1], 10);
             const month = parseInt(parts[2], 10);
             const year = parseInt(parts[3], 10);
-
-            console.log(day);
-            console.log(month);
-            console.log(year);
 
             const dateObject = new Date();
             dateObject.setDate(day);
@@ -1298,7 +1276,6 @@ export const createChatflowMachine = (groqService: GroqService) =>
 
             return isDateValid;
           } catch (err) {
-            console.error(err.message);
             throw err;
           }
         }),

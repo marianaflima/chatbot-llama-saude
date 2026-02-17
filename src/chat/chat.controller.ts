@@ -21,7 +21,6 @@ export class ChatController {
       const result = await this.chatService.handleMessage(dto);
       return result;
     } catch (error) {
-      console.error(error);
       return { replies: ['Desculpe, houve um erro no servidor.'], history: [] };
     }
   }
